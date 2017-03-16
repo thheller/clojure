@@ -314,6 +314,15 @@ static final public Var COLUMN_BEFORE = Var.create(0).setDynamic();
 static final public Var LINE_AFTER = Var.create(0).setDynamic();
 static final public Var COLUMN_AFTER = Var.create(0).setDynamic();
 
+static ReaderLocation readerLocation(){
+    return new ReaderLocation(
+            (String)SOURCE_PATH.deref(),
+            (Integer)LINE_BEFORE.deref(),
+            (Integer)COLUMN_BEFORE.deref(),
+            (Integer)LINE_AFTER.deref(),
+            (Integer)COLUMN_AFTER.deref());
+}
+
 //Integer
 static final public Var NEXT_LOCAL_NUM = Var.create(0).setDynamic();
 
@@ -6717,21 +6726,43 @@ private static Expr analyze(C context, Object form, String name) {
 	catch(Throwable e)
 		{
 		if(!(e instanceof CompilerException))
-			throw new CompilerException((String) SOURCE_PATH.deref(), lineDeref(), columnDeref(), e);
+			throw new CompilerException((String) SOURCE_PATH.deref(), lineDeref(), columnDeref(), e, readerLocation());
 		else
 			throw (CompilerException) e;
 		}
 }
 
+static public class ReaderLocation {
+    final public String source;
+    final public int lineBefore;
+    final public int columnBefore;
+    final public int lineAfter;
+    final public int columnAfter;
+
+    public ReaderLocation(String source, int lineBefore, int columnBefore, int lineAfter, int columnAfter) {
+        this.source = source;
+        this.lineBefore = lineBefore;
+        this.columnBefore = columnBefore;
+        this.lineAfter = lineAfter;
+        this.columnAfter = columnAfter;
+    }
+}
+
 static public class CompilerException extends RuntimeException{
 	final public String source;
-	
+
 	final public int line;
 
-	public CompilerException(String source, int line, int column, Throwable cause){
+	final public ReaderLocation location;
+
+    public CompilerException(String source, int line, int column, Throwable cause) {
+        this(source, line, column, cause, null);
+    }
+    public CompilerException(String source, int line, int column, Throwable cause, ReaderLocation location){
 		super(errorMsg(source, line, column, cause.toString()), cause);
 		this.source = source;
 		this.line = line;
+		this.location = location;
 	}
 
 	public String toString(){
@@ -6817,9 +6848,9 @@ public static Object macroexpand1(Object x) {
 								}
 							Symbol.intern("clojure.spec");
 						}
-					catch(IllegalArgumentException e)
+					catch(ExceptionInfo e)
 						{
-						throw new CompilerException((String) SOURCE_PATH.deref(), lineDeref(), columnDeref(), e);
+						throw new CompilerException((String) SOURCE_PATH.deref(), lineDeref(), columnDeref(), e, readerLocation());
 						}
 					}
 				try
@@ -6923,7 +6954,7 @@ private static Expr analyzeSeq(C context, ISeq form, String name) {
 	catch(Throwable e)
 		{
 		if(!(e instanceof CompilerException))
-			throw new CompilerException((String) SOURCE_PATH.deref(), lineDeref(), columnDeref(), e);
+			throw new CompilerException((String) SOURCE_PATH.deref(), lineDeref(), columnDeref(), e, readerLocation());
 		else
 			throw (CompilerException) e;
 		}
